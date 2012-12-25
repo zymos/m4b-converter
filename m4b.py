@@ -287,7 +287,7 @@ def split(args, log, output_dir, encoded_file, chapters):
         values = dict(num=chapter.num, title=chapter.title, start=chapter.start, end=chapter.end, duration=chapter.duration())
         chapter_name = re_sub.sub('', (args.custom_name % values).replace('/', '-').replace(':', '-'))
         if not isinstance(chapter_name, unicode):
-            chapter_name = unicode(chapter_name, 'utf-8')
+            chapter_name = unicode(chapter_name, 'Latin-1')
 
         if sys.platform.startswith('win'):
             fname = os.path.join(output_dir, '_tmp_%d.%s' % (chapter.num, args.ext))
