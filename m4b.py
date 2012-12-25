@@ -292,7 +292,7 @@ def split(args, log, output_dir, encoded_file, chapters):
         if sys.platform.startswith('win'):
             fname = os.path.join(output_dir, '_tmp_%d.%s' % (chapter.num, args.ext))
         else:
-            fname = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
+            fname = os.path.join(output_dir, '%s.%s' % (chapter_name.encode('utf-8'), args.ext))
 
         values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
             start=str(chapter.start), outfile=encoded_file, infile=fname)
