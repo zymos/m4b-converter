@@ -1,21 +1,14 @@
 import ctypes
+import ctypes.util
 import os.path
 import sys
 
+dll_path = ctypes.util.find_library('mp4v2')
 
-if sys.platform.startswith('linux'):
-    try:
-        dll = ctypes.CDLL('libmp4v2.so')
-    except OSError:
-        dll = ctypes.CDLL('libmp4v2.so.0')
-elif sys.platform.startswith('win'):
-    p = os.path.join(os.path.dirname(__file__), 'libmp4v2.dll')
-    if not os.path.isfile(p):
-        p = 'libmp4v2.dll'
-    dll = ctypes.CDLL(p)
-else:
-    raise NotImplementedError('O/S %r not supported' % sys.platform)
+if dll_path == None:
+    raise RuntimeError("Could not find libmp4v2")
 
+dll = ctypes.CDLL(dll_path)
 
 class _Enum(ctypes.c_ulong):
     _names={}
