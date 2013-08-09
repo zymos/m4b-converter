@@ -287,15 +287,15 @@ def split(args, log, output_dir, encoded_file, chapters):
         values = dict(num=chapter.num, title=chapter.title, start=chapter.start, end=chapter.end, duration=chapter.duration())
         chapter_name = re_sub.sub('', (args.custom_name % values).replace('/', '-').replace(':', '-'))
         if not isinstance(chapter_name, unicode):
-            chapter_name = unicode(chapter_name, 'Latin-1')
+            chapter_name = unicode(chapter_name, 'utf-8')
 
         if sys.platform.startswith('win'):
             fname = os.path.join(output_dir, '_tmp_%d.%s' % (chapter.num, args.ext))
         else:
-            fname = os.path.join(output_dir, '%s.%s' % (chapter_name.encode('utf-8'), args.ext))
+            fname = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
 
         values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
-            start=str(chapter.start), outfile=encoded_file, infile=fname)
+            start=str(chapter.start), outfile=encoded_file, infile=fname.encode('utf-8'))
         split_cmd = '%(ffmpeg)s -y -acodec copy -t %(duration)s -ss %(start)s -i %(outfile)s %(infile)s'
 
         log.info("Splitting chapter %2d/%2d '%s'..." % (chapter.num, len(chapters), chapter_name))
@@ -322,6 +322,8 @@ def main():
             temp_dir = os.path.join(output_dir, 'temp')
 
         log = setup_logging(args, basename)
+
+        output_dir = output_dir.decode('utf-8')
 
         log.info("Initiating script for file '%s'." % filename)
 
