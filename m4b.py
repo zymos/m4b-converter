@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import argparse
 import ctypes
@@ -310,6 +310,9 @@ def split(args, log, output_dir, encoded_file, chapters):
             shutil.move(fname, new_filename)
 
 def main():
+    if sys.version_info[0] >= 3:
+        raise Exception("This script sadly does not work with python3")
+
     args = parse_args()
 
     for filename in args.filename:
