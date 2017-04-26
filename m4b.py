@@ -1,5 +1,21 @@
 #!/usr/bin/env python2
 
+######################################################################################
+######################################################################################
+##                              m4b split
+##  Author: valekhz
+##  Contrib: Alex5719, ElieDeBrauwer, zymos
+##  Date:   2010-2017
+##  Description: converst m4b to mp3 and splits chapters
+##  Requirements: ffmpeg, libmp4v2(optional)
+##
+#######################################################################################
+#######################################################################################
+
+
+##########################
+# Import
+#
 import argparse
 import ctypes
 import datetime
@@ -12,9 +28,13 @@ import sys
 from textwrap import dedent
 
 
-class Chapter:
-    """MP4 Chapter.
 
+##########################
+# Objects
+#
+class Chapter:
+    # MP4 Chapter info.
+    """
     Start, end, and duration times are stored in seconds.
     """
     def __init__(self, title=None, start=None, end=None, num=None):
@@ -37,7 +57,17 @@ class Chapter:
             datetime.timedelta(seconds=self.duration()))
 
 
+
+
+
+############################
+# Functions
+#
+
+
 def run_command(log, cmdstr, values, action, ignore_errors=False, **kwargs):
+    # Executes external command (FFMPEG) 
+
     cmd = []
     for opt in cmdstr.split(' '):
         cmd.append(opt % values)
@@ -54,8 +84,10 @@ def run_command(log, cmdstr, values, action, ignore_errors=False, **kwargs):
         sys.exit(1)
     return output
 
+
+
 def parse_args():
-    """Parse command line arguments."""
+    # Parse command line arguments.
 
     parser = argparse.ArgumentParser(
         description='Split m4b audio book by chapters.')
@@ -96,8 +128,12 @@ def parse_args():
 
     return args
 
+
+
+
 def setup_logging(args, basename):
-    """Setup logger. In debug mode debug messages will be saved to a log file."""
+    # Setup logger. 
+    """In debug mode debug messages will be saved to a log file."""
 
     log = logging.getLogger(basename)
 
@@ -127,21 +163,25 @@ def setup_logging(args, basename):
         log.debug('\n'.join(s))
     return log
 
-def ffmpeg_metadata(args, log, filename):
-    """Load metadata using the command output from ffmpeg.
 
+
+
+def ffmpeg_metadata(args, log, filename):
+    # Load metadata using the command output from ffmpeg.
+    """
     Note: Not all chapter types are supported by ffmpeg and there's no Unicode support.
     """
 
     chapters = []
-
+    
+    # Grabbing metadata from ffmpeg, 
+    # using 'ffprobe -show_chapters -print_format csv'  would work too
     values = dict(ffmpeg=args.ffmpeg, infile=filename)
-    cmd = '%(ffmpeg)s -i %(infile)s -c:v copy'
+    cmd = '%(ffmpeg)s -i %(infile)s'
     log.debug('Retrieving metadata from output of command: %s' % (cmd % values))
 
     output = run_command(log, cmd, values, 'retrieving metadata from ffmpeg output',
         ignore_errors=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
     raw_metadata = (output.split("    Chapter ")[0]).split('Input #')[1]
     raw_chapters = output.split("    Chapter ")[1:]
 
@@ -182,8 +222,11 @@ def ffmpeg_metadata(args, log, filename):
 
     return chapters, sample_rate, bit_rate, metadata
 
+
+
 def mp4v2_metadata(filename):
-    """Load metadata with libmp4v2. Supports both chapter types and Unicode."""
+    # Load metadata with libmp4v2. 
+    """Supports both chapter types and Unicode."""
 
     from libmp4v2 import MP4File
 
@@ -199,7 +242,10 @@ def mp4v2_metadata(filename):
 
     return chapters, sample_rate, bit_rate, metadata
 
+
+
 def load_metadata(args, log, filename):
+    # Load metadata from ffmpeg or libmp4v2
     if args.no_mp4v2:
         log.info('Loading metadata using ffmpeg...')
         return ffmpeg_metadata(args, log, filename)
@@ -207,8 +253,10 @@ def load_metadata(args, log, filename):
         log.info('Loading metadata using libmp4v2...')
         return mp4v2_metadata(filename)
 
+
+
 def show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata):
-    """Show a summary of the parsed metadata."""
+    # Show a summary of the parsed metadata.
 
     log.info(dedent('''
         Metadata:
@@ -228,8 +276,10 @@ def show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata):
         if not cont.lower().startswith('y'):
             sys.exit(1)
 
+
+
 def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit_rate, metadata):
-    """Encode audio."""
+    # Encode audio.
 
     # Create output and temp directory
     if not os.path.isdir(output_dir):
@@ -270,12 +320,15 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
     log.debug('Encoding with command: %s' % (encode_cmd % cmd_values))
 
     run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav)
+    print "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<BEEP 222222222>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
 
     return encoded_file
 
-def split(args, log, output_dir, encoded_file, chapters):
-    """Split encoded audio file into chapters.
 
+
+def split(args, log, output_dir, encoded_file, chapters):
+    # Split encoded audio file into chapters.
+    """
     Note: ffmpeg on Windows can't take filenames with Unicode characters so we
     write the split file to a non-unicode temp file then rename it. This is not
     necessary on other platforms.
@@ -283,8 +336,9 @@ def split(args, log, output_dir, encoded_file, chapters):
     re_format = re.compile(r'%\(([A-Za-z0-9]+)\)')
     re_sub = re.compile(r'[\\\*\?\"\<\>\|]+')
 
+    # for each chapter
     for chapter in chapters:
-        values = dict(num=chapter.num, title=chapter.title, start=chapter.start, end=chapter.end, duration=chapter.duration())
+        values = dict(num=chapter.num, title=chapter.title, start=chapter.start, end=chapter.end, duration=chapter.duration(), chapters_total=len(chapters))
         chapter_name = re_sub.sub('', (args.custom_name % values).replace('/', '-').replace(':', '-'))
         if not isinstance(chapter_name, unicode):
             chapter_name = unicode(chapter_name, 'utf-8')
@@ -293,11 +347,12 @@ def split(args, log, output_dir, encoded_file, chapters):
             fname = os.path.join(output_dir, '_tmp_%d.%s' % (chapter.num, args.ext))
         else:
             fname = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
-
+        
         values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
             start=str(chapter.start), outfile=encoded_file, infile=fname.encode('utf-8'))
-        split_cmd = '%(ffmpeg)s -i %(outfile)s -y -acodec copy -c:v copy -t %(duration)s -ss %(start)s %(infile)s'
-
+        split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s %(infile)s'
+        #split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track="%(num)s/%(chapters_total)s" -id3v2_version 3 %(infile)s'
+        # -metadata track="X/Y" -id3v2_version 3 -write_id3v1 1
         log.info("Splitting chapter %2d/%2d '%s'..." % (chapter.num, len(chapters), chapter_name))
         log.debug('Splitting with command: %s' % (split_cmd % values))
 
@@ -309,12 +364,19 @@ def split(args, log, output_dir, encoded_file, chapters):
             log.debug('Renaming "%s" to "%s".\n' % (fname, new_filename))
             shutil.move(fname, new_filename)
 
+
+
+############################
+# Main
+#
 def main():
     if sys.version_info[0] >= 3:
         raise Exception("This script sadly does not work with python3")
 
+    # parse arguments
     args = parse_args()
 
+    # for each m4b file
     for filename in args.filename:
         basename = os.path.splitext(os.path.basename(filename))[0]
         output_dir = os.path.join(args.output_dir, basename)
@@ -324,19 +386,25 @@ def main():
         else:
             temp_dir = os.path.join(output_dir, 'temp')
 
+        # setup logging
         log = setup_logging(args, basename)
 
+        # create dir to save files
         output_dir = output_dir.decode('utf-8')
 
         log.info("Initiating script for file '%s'." % filename)
 
+        # grab metadata
         chapters, sample_rate, bit_rate, metadata = load_metadata(args, log, filename)
         show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata)
 
+        # encode to mp3
         encoded_file = encode(args, log, output_dir, temp_dir, filename,
             basename, sample_rate, bit_rate, metadata)
 
+        # split into chapter files
         split(args, log, output_dir, encoded_file, chapters)
+
 
 if __name__ == '__main__':
     main()
