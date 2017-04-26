@@ -136,7 +136,7 @@ def ffmpeg_metadata(args, log, filename):
     chapters = []
 
     values = dict(ffmpeg=args.ffmpeg, infile=filename)
-    cmd = '%(ffmpeg)s -i %(infile)s'
+    cmd = '%(ffmpeg)s -i %(infile)s -c:v copy'
     log.debug('Retrieving metadata from output of command: %s' % (cmd % values))
 
     output = run_command(log, cmd, values, 'retrieving metadata from ffmpeg output',
@@ -296,7 +296,7 @@ def split(args, log, output_dir, encoded_file, chapters):
 
         values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
             start=str(chapter.start), outfile=encoded_file, infile=fname.encode('utf-8'))
-        split_cmd = '%(ffmpeg)s -i %(outfile)s -y -acodec copy -t %(duration)s -ss %(start)s %(infile)s'
+        split_cmd = '%(ffmpeg)s -i %(outfile)s -y -acodec copy -c:v copy -t %(duration)s -ss %(start)s %(infile)s'
 
         log.info("Splitting chapter %2d/%2d '%s'..." % (chapter.num, len(chapters), chapter_name))
         log.debug('Splitting with command: %s' % (split_cmd % values))
