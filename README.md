@@ -7,7 +7,7 @@ This is a simple python script to convert and split m4b audio books into mp3 fil
 
 * [Python](http://www.python.org/download/) (tested with v2.7)
 * ffmpeg
-* [mp4v2](http://code.google.com/p/mp4v2/downloads/detail?name=mp4v2-1.9.1.tar.bz2&can=2&q=) (v1.9.1)
+* [mp4v2](https://code.google.com/archive/p/mp4v2/downloads)
 
 
 ## Installation
@@ -23,6 +23,14 @@ own dll, then place it in this directory.
 
 1. Install packages: `sudo apt-get install python2.7 ffmpeg libavcodec-extra-52`
 2. Download mp4v2 then [compile](http://code.google.com/p/mp4v2/wiki/BuildSource) and install.
+
+### Ubuntu 12, 14, 16
+
+1. Install packages: `sudo apt-get install python ffmpeg libavcodec-extra libmp4v2-2`
+
+### Debian 9.0 Stretch - 2017
+
+1. Install packages: `sudo apt-get install python ffmpeg libavcodec-extra libmp4v2-2`
 
 ## Usage
 
