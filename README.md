@@ -14,8 +14,8 @@ This is a simple python script to convert and split m4b audio books into mp3 fil
 
 ### Windows
 
-1. Install python 2.7.
-2. Download [ffmpeg](http://ffmpeg.arrozcru.org/autobuilds/) and place `ffmpeg.exe` in this directory or your `PATH`.
+1. Install python 2.7.xx (https://www.python.org/downloads/windows/)
+2. Download [ffmpeg](http://ffmpeg.zeranoe.com/builds/) and place `ffmpeg.exe` in this directory or your `PATH`.
 3. Download [libmp4v2.dll](https://github.com/valekhz/libmp4v2-dll/zipball/v0.1) or [compile](http://code.google.com/p/mp4v2/wiki/BuildSource) your
 own dll, then place it in this directory.
 
