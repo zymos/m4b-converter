@@ -1,12 +1,13 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+
 ######################################################################################
 ######################################################################################
 ##                              m4b split
 ##  Author: valekhz
 ##  Contrib: Alex5719, ElieDeBrauwer, zymos
 ##  Date:   2010-2017
-##  Description: converst m4b to mp3 and splits chapters
+##  Description: converts m4b to mp3 and splits file into chapters
 ##  Requirements: ffmpeg, libmp4v2(optional)
 ##
 ##  Source: https://github.com/zymos/m4b-converter
@@ -98,7 +99,7 @@ def parse_args():
 
     parser.add_argument('-o', '--output-dir', help='directory to store encoded files',
                         metavar='DIR')
-    parser.add_argument('--custom-name', default='%(title)s', metavar='"STR"',
+    parser.add_argument('--custom-name', default='%(num)03d \- %(title)s', metavar='"STR"',
                         help='customize chapter filenames (see README)')
     parser.add_argument('--ffmpeg', default='ffmpeg', metavar='BIN',
                         help='path to ffmpeg binary')
@@ -116,10 +117,12 @@ def parse_args():
                         help='output debug messages and save to log file')
     parser.add_argument('filename', help='m4b file(s) to be converted', nargs='+')
 
-    parser.add_argument('-b', '--bitrate', default='64k', 
-            help='Bitrate for mp3 encoding (default 64k)')
-    parser.add_argument('-s', '--samplerate', default='22050', 
-            help='Sample Rate for mp3 encoding (default 22050)')
+    # parser.add_argument('--keep_tmp_files', action='store_true', 
+            # help='Keep temporary files')
+    # parser.add_argument('-b', '--bitrate', default='64k', 
+            # help='Bitrate for mp3 encoding (default 64k)')
+    # parser.add_argument('-s', '--samplerate', default='22050', 
+            # help='Sample Rate for mp3 encoding (default 22050)')
 
     args = parser.parse_args()
 
@@ -346,22 +349,33 @@ def split(args, log, output_dir, encoded_file, chapters):
     # for each chapter
     for chapter in chapters:
         values = dict(num=chapter.num, title=chapter.title, start=chapter.start, end=chapter.end, duration=chapter.duration(), chapters_total=len(chapters))
+        
+        # Create output filename
+        # remove special chars, control chars and all around anoying chars
         chapter_name = re_sub.sub('', (args.custom_name % values).replace('/', '-').replace(':', '-'))
-        chapter_name = re.sub('[^a-zA-Z0-9!\(\)\.,_~µÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ ]', '', chapter_name)
         if not isinstance(chapter_name, unicode):
             chapter_name = unicode(chapter_name, 'utf-8')
+        chapter_name = re.sub('[^a-zA-Z0-9!\(\)\.,_\-µÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ ]', '', chapter_name) # remove annoying chars
+        # if chap name is blank or title=chap_num, correct
+        if(chapter_name == '' or chapter.title == "%03d"%chapter.num): 
+            chapter_name = "%03d" % chapter.num
+        chapter_name = re.sub(' +', ' ', chapter_name) # remove multiple space
 
         if sys.platform.startswith('win'):
             fname = os.path.join(output_dir, '_tmp_%d.%s' % (chapter.num, args.ext))
         else:
             fname = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
-        
+
+        #track number
+        # track_number = num
+
+        # Get ready to reencode
         values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
-            start=str(chapter.start), outfile=encoded_file, infile=fname.encode('utf-8'))
-        split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s %(infile)s'
+            start=str(chapter.start), track=str(chapter.num), track_total=str(len(chapters)), outfile=encoded_file, infile=fname.encode('utf-8'))
+        split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track=\"%(track)s/%(track_total)s\" -id3v2_version 3 %(infile)s'
         #split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track="%(num)s/%(chapters_total)s" -id3v2_version 3 %(infile)s'
         # -metadata track="X/Y" -id3v2_version 3 -write_id3v1 1
-        log.info("Splitting chapter %2d/%2d '%s'..." % (chapter.num, len(chapters), chapter_name))
+        log.info("Splitting chapter %2d/%2d '%s.%s'..." % (chapter.num, len(chapters), chapter_name, args.ext))
         log.debug('Splitting with command: %s' % (split_cmd % values))
 
         run_command(log, split_cmd, values, 'splitting audio file', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
