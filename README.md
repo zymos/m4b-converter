@@ -114,3 +114,19 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 Encode with lame.exe:
 
     python m4b.py --encoder lame.exe --pipe-wav --encode-opts "-V 3 -h - %(outfile)s" myfile.m4b
+
+
+## Change Log
+
+4/2017 - 
+	Fix encoder error: Too many packets buffered for output stream 0:1.
+	Updated some installation instructions
+	Quiet output of ffmpeg durrent encoding
+
+
+## TODO
+Add track number
+Improve command line args, bitrate, samplerate
+Check for chapers of zero time
+Delete temp folder
+Fix default filename

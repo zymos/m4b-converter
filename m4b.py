@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-
+# -*- coding: utf-8 -*-
 ######################################################################################
 ######################################################################################
 ##                              m4b split
@@ -8,6 +8,10 @@
 ##  Date:   2010-2017
 ##  Description: converst m4b to mp3 and splits chapters
 ##  Requirements: ffmpeg, libmp4v2(optional)
+##
+##  Source: https://github.com/zymos/m4b-converter
+##
+##  References: https://github.com/valekhz/m4b-converter
 ##
 #######################################################################################
 #######################################################################################
@@ -100,7 +104,7 @@ def parse_args():
                         help='path to ffmpeg binary')
     parser.add_argument('--encoder', metavar='BIN',
                         help='path to encoder binary (default: ffmpeg)')
-    parser.add_argument('--encode-opts', default='-y -i %(infile)s -acodec libmp3lame -ar %(sample_rate)d -ab %(bit_rate)dk %(outfile)s',
+    parser.add_argument('--encode-opts', default='-loglevel panic -y -i %(infile)s -acodec libmp3lame -ar %(sample_rate)d -ab %(bit_rate)dk -c:v copy %(outfile)s',
                         metavar='"STR"', help='custom encoding string (see README)')
     parser.add_argument('--ext', default='mp3', help='extension of encoded files')
     parser.add_argument('--pipe-wav', action='store_true', help='pipe wav to encoder')
@@ -111,6 +115,11 @@ def parse_args():
     parser.add_argument('--debug', action='store_true',
                         help='output debug messages and save to log file')
     parser.add_argument('filename', help='m4b file(s) to be converted', nargs='+')
+
+    parser.add_argument('-b', '--bitrate', default='64k', 
+            help='Bitrate for mp3 encoding (default 64k)')
+    parser.add_argument('-s', '--samplerate', default='22050', 
+            help='Sample Rate for mp3 encoding (default 22050)')
 
     args = parser.parse_args()
 
@@ -312,15 +321,13 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
         sys.exit(1)
 
     encode_cmd = '%%(encoder)s %s' % args.encode_opts
-
     if args.pipe_wav:
         encode_cmd = '%(ffmpeg)s -i %(infile)s -f wav pipe:1 | ' + encode_cmd
 
-    log.info('Encoding audio...')
+    log.info('Encoding audio (may take some time)...')
     log.debug('Encoding with command: %s' % (encode_cmd % cmd_values))
 
     run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav)
-    print "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<BEEP 222222222>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
 
     return encoded_file
 
@@ -340,6 +347,7 @@ def split(args, log, output_dir, encoded_file, chapters):
     for chapter in chapters:
         values = dict(num=chapter.num, title=chapter.title, start=chapter.start, end=chapter.end, duration=chapter.duration(), chapters_total=len(chapters))
         chapter_name = re_sub.sub('', (args.custom_name % values).replace('/', '-').replace(':', '-'))
+        chapter_name = re.sub('[^a-zA-Z0-9!\(\)\.,_~µÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ ]', '', chapter_name)
         if not isinstance(chapter_name, unicode):
             chapter_name = unicode(chapter_name, 'utf-8')
 
