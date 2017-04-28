@@ -122,11 +122,11 @@ Encode with lame.exe:
 	Fix encoder error: Too many packets buffered for output stream 0:1.
 	Updated some installation instructions
 	Quiet output of ffmpeg durrent encoding
+	Improved filenaming
+	Added ID3 track numbers
 
 
 ## TODO
-Add track number
 Improve command line args, bitrate, samplerate
 Check for chapers of zero time
 Delete temp folder
-Fix default filename
