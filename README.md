@@ -124,9 +124,12 @@ Encode with lame.exe:
 	Quiet output of ffmpeg durrent encoding
 	Improved filenaming
 	Added ID3 track numbers
-
+	Added ID3 genre=Audiobook
+	Delete temp files/folder
+5/2017:
+	Fixed problem with encoding file with single chapter
 
 ## TODO
 Improve command line args, bitrate, samplerate
 Check for chapers of zero time
-Delete temp folder
+Cover art is missing on tracks!=1

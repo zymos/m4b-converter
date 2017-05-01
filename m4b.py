@@ -114,11 +114,13 @@ def parse_args():
     parser.add_argument('--no-mp4v2', action='store_true',
                         help='use ffmpeg to retrieve chapters (not recommended)')
     parser.add_argument('--debug', action='store_true',
-                        help='output debug messages and save to log file')
+                        help='output debug messages and save to log file, also keeps tmp files')
     parser.add_argument('filename', help='m4b file(s) to be converted', nargs='+')
 
-    # parser.add_argument('--keep_tmp_files', action='store_true', 
-            # help='Keep temporary files')
+    parser.add_argument('--keep-tmp-files', action='store_true', 
+            help='keep temporary files')
+    parser.add_argument('--not-audiobook', action='store_true', 
+            help='do not add genre=Audiobook')
     # parser.add_argument('-b', '--bitrate', default='64k', 
             # help='Bitrate for mp3 encoding (default 64k)')
     # parser.add_argument('-s', '--samplerate', default='22050', 
@@ -288,7 +290,25 @@ def show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata):
         if not cont.lower().startswith('y'):
             sys.exit(1)
 
+# def extract_cover_art(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit_rate, metadata):
+# Extract the cover art to reencode with it.
+# """ THere seems to be a bug where cover art not copying art when start time != 0 """
 
+    # cmd_values = dict(ffmpeg=args.ffmpeg, encoder=args.encoder, infile=filename,
+        # sample_rate=sample_rate, bit_rate=bit_rate, outfile=encoded_file)
+    
+    # encode_cmd = '%%(encoder)s %s' % args.encode_opts
+    # encoder_cmd = '%(ffmpeg)s -i %(infile)s -an -c:v copy %(temp_dir)s/cover.jpg'
+
+    # if args.pipe_wav:
+        # encode_cmd = '%(ffmpeg)s -i %(infile)s -f wav pipe:1 | ' + encode_cmd
+    
+    # log.info('Extract Cover Art...')
+    # log.debug('Extract with command: %s' % (encode_cmd % cmd_values))
+
+    # run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav)
+    # run_command(log, split_cmd, values, 'splitting audio file', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+   
 
 def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit_rate, metadata):
     # Encode audio.
@@ -346,45 +366,62 @@ def split(args, log, output_dir, encoded_file, chapters):
     re_format = re.compile(r'%\(([A-Za-z0-9]+)\)')
     re_sub = re.compile(r'[\\\*\?\"\<\>\|]+')
 
-    # for each chapter
-    for chapter in chapters:
-        values = dict(num=chapter.num, title=chapter.title, start=chapter.start, end=chapter.end, duration=chapter.duration(), chapters_total=len(chapters))
-        
-        # Create output filename
-        # remove special chars, control chars and all around anoying chars
-        chapter_name = re_sub.sub('', (args.custom_name % values).replace('/', '-').replace(':', '-'))
-        if not isinstance(chapter_name, unicode):
-            chapter_name = unicode(chapter_name, 'utf-8')
-        chapter_name = re.sub('[^a-zA-Z0-9!\(\)\.,_\-µÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ ]', '', chapter_name) # remove annoying chars
-        # if chap name is blank or title=chap_num, correct
-        if(chapter_name == '' or chapter.title == "%03d"%chapter.num): 
-            chapter_name = "%03d" % chapter.num
-        chapter_name = re.sub(' +', ' ', chapter_name) # remove multiple space
+    if(len(chapters) == 0): # no chapters, single file
+        log.info("No chapters: using single encoded file")
+        log.debug('moving %s to %s' % (encoded_file,output_dir))
+        shutil.move(encoded_file,output_dir)
+    else:
+        # for each chapter
+        for chapter in chapters:
+            values = dict(num=chapter.num, title=chapter.title, start=chapter.start, end=chapter.end, duration=chapter.duration(), chapters_total=len(chapters))
+            
+            # Create output filename
+            # remove special chars, control chars and all around anoying chars
+            chapter_name = re_sub.sub('', (args.custom_name % values).replace('/', '-').replace(':', '-'))
+            if not isinstance(chapter_name, unicode):
+                chapter_name = unicode(chapter_name, 'utf-8')
+            chapter_name = re.sub('[^a-zA-Z0-9!\(\)\.,_\-µÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ ]', '', chapter_name) # remove annoying chars
+            # if chap name is blank or title=chap_num, correct
+            if(chapter_name == '' or chapter.title == "%03d"%chapter.num): 
+                chapter_name = "%03d" % chapter.num
+            chapter_name = re.sub(' +', ' ', chapter_name) # remove multiple space
 
-        if sys.platform.startswith('win'):
-            fname = os.path.join(output_dir, '_tmp_%d.%s' % (chapter.num, args.ext))
-        else:
-            fname = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
+            # temporarly rename file in windows
+            if sys.platform.startswith('win'):
+                fname = os.path.join(output_dir, '_tmp_%d.%s' % (chapter.num, args.ext))
+            else:
+                fname = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
+            
+            # cover art
+            # -i cover.png -c copy -map 0 -map 1 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (Front)"
+            # ffmpeg -i original.mp3 -i cover.png -map 0:0 -map 1:0 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (Front)" -id3v2_version 3 -write_id3v1 1 result.mp3
+            
+            # Metadata stuff
+            # if(os.path.isfile(fname)): #FIX    #will this work with m4b?
+                # cover_art='-i cover.jpg -map 0 -map 1 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (Front)"' 
+            # if(not(args.not-audiobook)): # add genre=Audiobook, should work with mp3 and m4b
+                # metadata_genre='-metadata genre=Audiobook' # -metadata:s:a genre=Audiobook maybe
+             # if(arg.ext == 'mp3'): # add ID3 tag
+                # metadata_id3='-id3v2_version 3 -write_id3v1 1'
+            # metadata_track='-metadata track="' + str(chapter.num) + '/' + str(len(chapters)) + '"'       
+            # metadata=" ".join(cover_art, metadata_genre, metadata_track, metadata_id3)
 
-        #track number
-        # track_number = num
+            # Get ready to reencode
+            values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
+                start=str(chapter.start), track=str(chapter.num), meta=metadata, track_total=str(len(chapters)), outfile=encoded_file, infile=fname.encode('utf-8'))
+            split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track=%(track)s/%(track_total)s -id3v2_version 3 %(infile)s'
+            #split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track="%(num)s/%(chapters_total)s" -id3v2_version 3 %(infile)s'
+            # -metadata track="X/Y" -id3v2_version 3 -write_id3v1 1
+            log.info("Splitting chapter %2d/%2d '%s.%s'..." % (chapter.num, len(chapters), chapter_name, args.ext))
+            log.debug('Splitting with command: %s' % (split_cmd % values))
 
-        # Get ready to reencode
-        values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
-            start=str(chapter.start), track=str(chapter.num), track_total=str(len(chapters)), outfile=encoded_file, infile=fname.encode('utf-8'))
-        split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track=\"%(track)s/%(track_total)s\" -id3v2_version 3 %(infile)s'
-        #split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track="%(num)s/%(chapters_total)s" -id3v2_version 3 %(infile)s'
-        # -metadata track="X/Y" -id3v2_version 3 -write_id3v1 1
-        log.info("Splitting chapter %2d/%2d '%s.%s'..." % (chapter.num, len(chapters), chapter_name, args.ext))
-        log.debug('Splitting with command: %s' % (split_cmd % values))
+            run_command(log, split_cmd, values, 'splitting audio file', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        run_command(log, split_cmd, values, 'splitting audio file', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        # Rename file
-        if sys.platform.startswith('win'):
-            new_filename = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
-            log.debug('Renaming "%s" to "%s".\n' % (fname, new_filename))
-            shutil.move(fname, new_filename)
+            # Rename file in windows
+            if sys.platform.startswith('win'):
+                new_filename = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
+                log.debug('Renaming "%s" to "%s".\n' % (fname, new_filename))
+                shutil.move(fname, new_filename)
 
 
 
@@ -400,9 +437,11 @@ def main():
 
     # for each m4b file
     for filename in args.filename:
+        # create output directory
         basename = os.path.splitext(os.path.basename(filename))[0]
         output_dir = os.path.join(args.output_dir, basename)
 
+        # skip encoding xor create tmp dir
         if args.skip_encoding:
             temp_dir = output_dir
         else:
@@ -411,7 +450,6 @@ def main():
         # setup logging
         log = setup_logging(args, basename)
 
-        # create dir to save files
         output_dir = output_dir.decode('utf-8')
 
         log.info("Initiating script for file '%s'." % filename)
@@ -426,6 +464,11 @@ def main():
 
         # split into chapter files
         split(args, log, output_dir, encoded_file, chapters)
+
+        # deletes temporary files
+        if(not(args.keep_tmp_files)):
+            log.info("Cleaning up temporary files")
+            shutil.rmtree(temp_dir)
 
 
 if __name__ == '__main__':
