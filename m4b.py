@@ -74,6 +74,7 @@ def run_command(log, cmdstr, values, action, ignore_errors=False, **kwargs):
     # Executes external command (FFMPEG) 
 
     cmd = []
+    # cmdstr=re.sub(' +', ' ', cmdstr)
     for opt in cmdstr.split(' '):
         cmd.append(opt % values)
     proc = subprocess.Popen(cmd, **kwargs)
@@ -105,7 +106,7 @@ def parse_args():
                         help='path to ffmpeg binary')
     parser.add_argument('--encoder', metavar='BIN',
                         help='path to encoder binary (default: ffmpeg)')
-    parser.add_argument('--encode-opts', default='-loglevel panic -y -i %(infile)s -acodec libmp3lame -ar %(sample_rate)d -ab %(bit_rate)dk -c:v copy %(outfile)s',
+    parser.add_argument('--encode-opts', default='-loglevel panic -y -i %(infile)s -ar %(sample_rate)d -ab %(bit_rate)dk -c:v copy %(outfile)s',
                         metavar='"STR"', help='custom encoding string (see README)')
     parser.add_argument('--ext', default='mp3', help='extension of encoded files')
     parser.add_argument('--pipe-wav', action='store_true', help='pipe wav to encoder')
@@ -121,10 +122,11 @@ def parse_args():
             help='keep temporary files')
     parser.add_argument('--not-audiobook', action='store_true', 
             help='do not add genre=Audiobook')
-    # parser.add_argument('-b', '--bitrate', default='64k', 
-            # help='Bitrate for mp3 encoding (default 64k)')
-    # parser.add_argument('-s', '--samplerate', default='22050', 
-            # help='Sample Rate for mp3 encoding (default 22050)')
+    parser.add_argument('-b', '--bitrate', type=int, 
+            help='Bitrate for mp3 encoding (example 64)')
+    parser.add_argument('-s', '--samplerate', type=int,
+            help='Sample Rate for mp3 encoding (example 22050')
+
 
     args = parser.parse_args()
 
@@ -169,7 +171,7 @@ def setup_logging(args, basename):
     sh.setLevel(level)
     log.addHandler(sh)
 
-    log.info('m4bsplit started.')
+    log.debug('Logging started.')
     if args.debug:
         s = ['Options:']
         for k, v in args.__dict__.items():
@@ -184,6 +186,7 @@ def ffmpeg_metadata(args, log, filename):
     # Load metadata using the command output from ffmpeg.
     """
     Note: Not all chapter types are supported by ffmpeg and there's no Unicode support.
+    ffprobe might work better
     """
 
     chapters = []
@@ -261,10 +264,10 @@ def mp4v2_metadata(filename):
 def load_metadata(args, log, filename):
     # Load metadata from ffmpeg or libmp4v2
     if args.no_mp4v2:
-        log.info('Loading metadata using ffmpeg...')
+        log.debug('Loading metadata using ffmpeg...')
         return ffmpeg_metadata(args, log, filename)
     else:
-        log.info('Loading metadata using libmp4v2...')
+        log.debug('Loading metadata using libmp4v2...')
         return mp4v2_metadata(filename)
 
 
@@ -273,7 +276,7 @@ def show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata):
     # Show a summary of the parsed metadata.
 
     log.info(dedent('''
-        Metadata:
+        Detected M4B Metadata:
           Chapters: %d
           Bit rate: %d kbit/s
           Sampling freq: %d Hz''' % (len(chapters), bit_rate, sample_rate)))
@@ -290,25 +293,28 @@ def show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata):
         if not cont.lower().startswith('y'):
             sys.exit(1)
 
-# def extract_cover_art(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit_rate, metadata):
-# Extract the cover art to reencode with it.
-# """ THere seems to be a bug where cover art not copying art when start time != 0 """
 
-    # cmd_values = dict(ffmpeg=args.ffmpeg, encoder=args.encoder, infile=filename,
-        # sample_rate=sample_rate, bit_rate=bit_rate, outfile=encoded_file)
+
+def extract_cover_art(args, log, temp_dir, filename):
+    # Extract the cover art to reencode with it.
+    """ THere seems to be a bug where cover art not copying art when start time != 0 """
+
+    extract_values = dict(ffmpeg=args.ffmpeg, orig_file=filename, temp_dir=temp_dir)
     
     # encode_cmd = '%%(encoder)s %s' % args.encode_opts
-    # encoder_cmd = '%(ffmpeg)s -i %(infile)s -an -c:v copy %(temp_dir)s/cover.jpg'
+    cover_file= os.path.join(temp_dir, "cover.jpg")
 
-    # if args.pipe_wav:
-        # encode_cmd = '%(ffmpeg)s -i %(infile)s -f wav pipe:1 | ' + encode_cmd
-    
-    # log.info('Extract Cover Art...')
-    # log.debug('Extract with command: %s' % (encode_cmd % cmd_values))
-
-    # run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav)
-    # run_command(log, split_cmd, values, 'splitting audio file', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if(os.path.exists(cover_file)):
+        log.debug('cover.jpg file already exists')
+    else:
+        extract_cmd = '%(ffmpeg)s -i %(orig_file)s -an -c:v copy %(temp_dir)s/cover.jpg'
+        log.info('Extract Cover Art...')
+        log.debug('Extract cover art command: %s' % (extract_cmd % extract_values))
+        # run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav)
+        run_command(log, extract_cmd, extract_values, 'extracting cover art', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
    
+
+
 
 def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit_rate, metadata):
     # Encode audio.
@@ -326,6 +332,18 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
     else:
         fname = '%s.%s' % (basename, args.ext)
         encoded_file = os.path.join(temp_dir, fname)
+
+    # bit_rate = str(bit_rate) + 'k' # adding a k
+    if(not(args.bitrate is None)): #bitrate from args
+        log.debug('Setting bitrate to %d kbps' % (args.bitrate))
+        bit_rate=args.bitrate
+    elif(bit_rate == 63): # bitrate of 63k is common for m4b, but not mp3
+        log.debug('Changing bitrate from 63k to 64k, to increase compatability')
+        bit_rate=64
+    if(not(args.samplerate is None)): # sample rate from args
+        log.debug('Setting sample rate to %d Hz' % (args.samplerate))
+        sample_rate=args.samplerate
+
 
     cmd_values = dict(ffmpeg=args.ffmpeg, encoder=args.encoder, infile=filename,
         sample_rate=sample_rate, bit_rate=bit_rate, outfile=encoded_file)
@@ -346,7 +364,13 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
     encode_cmd = '%%(encoder)s %s' % args.encode_opts
     if args.pipe_wav:
         encode_cmd = '%(ffmpeg)s -i %(infile)s -f wav pipe:1 | ' + encode_cmd
-
+    else: # extract the cover art, not sure if it can be piped
+        extract_cover_art(args, log, temp_dir, filename)
+    
+    log.info(dedent('''
+        Encoding %s:
+          Bit rate: %d kbit/s
+          Sampling freq: %d Hz''' % (args.ext, bit_rate, sample_rate)))
     log.info('Encoding audio (may take some time)...')
     log.debug('Encoding with command: %s' % (encode_cmd % cmd_values))
 
@@ -356,7 +380,7 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
 
 
 
-def split(args, log, output_dir, encoded_file, chapters):
+def split(args, log, output_dir, encoded_file, chapters, temp_dir):
     # Split encoded audio file into chapters.
     """
     Note: ffmpeg on Windows can't take filenames with Unicode characters so we
@@ -368,8 +392,18 @@ def split(args, log, output_dir, encoded_file, chapters):
 
     if(len(chapters) == 0): # no chapters, single file
         log.info("No chapters: using single encoded file")
-        log.debug('moving %s to %s' % (encoded_file,output_dir))
-        shutil.move(encoded_file,output_dir)
+        log.debug('Moving \n%s to \n%s' % (encoded_file,output_dir))
+        try:
+            shutil.move(encoded_file,output_dir)
+        except:
+            log.debug("File already exists,")
+            log.debug('Removing %s' % (os.path.join(output_dir, os.path.basename(encoded_file))))
+            os.remove(os.path.join(output_dir, os.path.basename(encoded_file)))
+            try:
+                log.debug('Moving \n%s to \n%s' % (os.path.basename(encoded_file),output_dir))
+                shutil.move(encoded_file,output_dir)
+            except:
+                log.info("Error there is a problem")
     else:
         # for each chapter
         for chapter in chapters:
@@ -393,23 +427,35 @@ def split(args, log, output_dir, encoded_file, chapters):
                 fname = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
             
             # cover art
-            # -i cover.png -c copy -map 0 -map 1 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (Front)"
-            # ffmpeg -i original.mp3 -i cover.png -map 0:0 -map 1:0 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (Front)" -id3v2_version 3 -write_id3v1 1 result.mp3
-            
-            # Metadata stuff
-            # if(os.path.isfile(fname)): #FIX    #will this work with m4b?
-                # cover_art='-i cover.jpg -map 0 -map 1 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (Front)"' 
-            # if(not(args.not-audiobook)): # add genre=Audiobook, should work with mp3 and m4b
-                # metadata_genre='-metadata genre=Audiobook' # -metadata:s:a genre=Audiobook maybe
-             # if(arg.ext == 'mp3'): # add ID3 tag
-                # metadata_id3='-id3v2_version 3 -write_id3v1 1'
-            # metadata_track='-metadata track="' + str(chapter.num) + '/' + str(len(chapters)) + '"'       
-            # metadata=" ".join(cover_art, metadata_genre, metadata_track, metadata_id3)
+            cover_file=os.path.join(temp_dir, "cover.jpg")
+            if(chapter.num == 1):
+                cover_param='-c:v copy'
+            elif(os.path.exists(cover_file)):
+                log.debug("Adding cover metadata")
+                cover_param = '-i %(cover_file)s -map 0 -map 1 -c:v copy -metadata:s:v title=%(cover_title)s -metadata:s:v comment=%(cover_comment)s'
+                # ffmpeg -i original.mp3 -i cover.png -map 0:0 -map 1:0 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (Front)" -id3v2_version 3 -write_id3v1 1 result.mp3
+            else: # no cover exist
+                cover_param=''
+                log.debug("No cover.jpg, not adding the metadata")
+            if(not(args.not_audiobook)): # add genre=Audiobook, should work with mp3 and m4b
+                log.debug("Adding genre=Audiobook")
+                metadata_genre='-metadata genre=Audiobook' # -metadata:s:a genre=Audiobook maybe
+            if(args.ext == 'mp3'): # add ID3 tag
+                log.debug("Adding mp3 id3")
+                metadata_id3='-id3v2_version 3 -write_id3v1 1'
+            log.debug("Adding track metadata")
+            metadata_track='-metadata track=' + str(chapter.num) + '/' + str(len(chapters))
+            metadata_param=" ".join([metadata_genre, metadata_track, metadata_id3])
+            log.debug("Metadata params: %s", metadata_param)
+            # metadata_param='-metadata genre=Audiobook -metadata track=1/1' 
+            # cover_param='-c:v copy'
 
             # Get ready to reencode
             values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
-                start=str(chapter.start), track=str(chapter.num), meta=metadata, track_total=str(len(chapters)), outfile=encoded_file, infile=fname.encode('utf-8'))
-            split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track=%(track)s/%(track_total)s -id3v2_version 3 %(infile)s'
+                start=str(chapter.start), metadata=metadata_param,
+                tmp_enc_file=encoded_file, chap_file=fname.encode('utf-8'), cover_file=cover_file, 
+                cover=cover_param, cover_title='Album cover', cover_comment='Cover (Front)')
+            split_cmd = '%(ffmpeg)s -y -i %(tmp_enc_file)s ' + cover_param + ' -c:a copy ' + metadata_param + ' -t %(duration)s -ss %(start)s %(chap_file)s'
             #split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track="%(num)s/%(chapters_total)s" -id3v2_version 3 %(infile)s'
             # -metadata track="X/Y" -id3v2_version 3 -write_id3v1 1
             log.info("Splitting chapter %2d/%2d '%s.%s'..." % (chapter.num, len(chapters), chapter_name, args.ext))
@@ -452,7 +498,7 @@ def main():
 
         output_dir = output_dir.decode('utf-8')
 
-        log.info("Initiating script for file '%s'." % filename)
+        log.info("M4B Split: '%s'." % filename)
 
         # grab metadata
         chapters, sample_rate, bit_rate, metadata = load_metadata(args, log, filename)
@@ -463,11 +509,11 @@ def main():
             basename, sample_rate, bit_rate, metadata)
 
         # split into chapter files
-        split(args, log, output_dir, encoded_file, chapters)
+        split(args, log, output_dir, encoded_file, chapters, temp_dir)
 
         # deletes temporary files
         if(not(args.keep_tmp_files)):
-            log.info("Cleaning up temporary files")
+            log.debug("Cleaning up temporary files")
             shutil.rmtree(temp_dir)
 
 

@@ -6,8 +6,8 @@ This is a simple python script to convert and split m4b audio books into mp3 fil
 ## Requirements
 
 * [Python](http://www.python.org/download/) (tested with v2.7)
-* ffmpeg
-* [mp4v2](https://code.google.com/archive/p/mp4v2/downloads)
+* [ffmpeg](https://ffmpeg.org/) (tested with v3.3)
+* [mp4v2](https://code.google.com/archive/p/mp4v2/downloads) (tested with v2.0.0)
 
 
 ## Installation
@@ -119,6 +119,7 @@ Encode with lame.exe:
 ## Change Log
 
 4/2017 - 
+	
 	Fix encoder error: Too many packets buffered for output stream 0:1.
 	Updated some installation instructions
 	Quiet output of ffmpeg durrent encoding
@@ -126,10 +127,15 @@ Encode with lame.exe:
 	Added ID3 track numbers
 	Added ID3 genre=Audiobook
 	Delete temp files/folder
-5/2017:
+
+
+5/2017-
+
 	Fixed problem with encoding file with single chapter
 
+
 ## TODO
-Improve command line args, bitrate, samplerate
-Check for chapers of zero time
-Cover art is missing on tracks!=1
+	
+	Improve command line args, bitrate, samplerate
+	Check for chapers of zero time
+	Cover art is missing on tracks!=1
