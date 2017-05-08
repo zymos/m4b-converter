@@ -42,29 +42,40 @@ There are two ways to use this script:
 
 ### Command Line Help
 
-    usage: m4b.py [-h] [-o DIR] [--custom-name "STR"] [--ffmpeg BIN]
-                  [--encoder BIN] [--encode-opts "STR"] [--ext EXT] [--pipe-wav]
-                  [--skip-encoding] [--no-mp4v2] [--debug]
-                  filename [filename ...]
+	usage: m4b.py [-h] [-o DIR] [--custom-name "STR"] [--ffmpeg BIN]
+				  [--encoder BIN] [--encode-opts "STR"] [--ext EXT] [--pipe-wav]
+				  [--skip-encoding] [--no-mp4v2] [--debug] [--keep-tmp-files]
+				  [--not-audiobook] [-b BITRATE] [-s SAMPLERATE]
+				  [--extract-cover-art]
+				  filename [filename ...]
 
-    Split m4b audio book by chapters.
+	Split m4b audio book by chapters.
 
-    positional arguments:
-      filename              m4b file(s) to be converted
+	positional arguments:
+	  filename              m4b file(s) to be converted
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      -o DIR, --output-dir DIR
-                            directory to store encoded files
-      --custom-name "STR"   customize chapter filenames (see README)
-      --ffmpeg BIN          path to ffmpeg binary
-      --encoder BIN         path to encoder binary (default: ffmpeg)
-      --encode-opts "STR"   custom encoding string (see README)
-      --ext EXT             extension of encoded files
-      --pipe-wav            pipe wav to encoder
-      --skip-encoding       do not encode audio (keep as .mp4)
-      --no-mp4v2            use ffmpeg to retrieve chapters (not recommended)
-      --debug               output debug messages and save to log file
+	optional arguments:
+	  -h, --help            show this help message and exit
+	  -o DIR, --output-dir DIR
+							directory to store encoded files
+	  --custom-name "STR"   customize chapter filenames (see README)
+	  --ffmpeg BIN          path to ffmpeg binary
+	  --encoder BIN         path to encoder binary (default: ffmpeg)
+	  --encode-opts "STR"   custom encoding string (see README)
+	  --ext EXT             extension of encoded files
+	  --pipe-wav            pipe wav to encoder
+	  --skip-encoding       do not encode audio (keep as .mp4)
+	  --no-mp4v2            use ffmpeg to retrieve chapters (not recommended)
+	  --debug               output debug messages and save to log file, also keeps
+							tmp files
+	  --keep-tmp-files      keep temporary files
+	  --not-audiobook       do not add genre=Audiobook
+	  -b BITRATE, --bitrate BITRATE
+							bitrate for mp3 encoding, integer (example 64)
+	  -s SAMPLERATE, --samplerate SAMPLERATE
+							sample Rate for mp3 encoding (example 22050
+	  --extract-cover-art   extracts cover art as cover.jpg
+
 
 #### Chapter filenames
 
@@ -124,7 +135,7 @@ Encode with lame.exe:
 * 4/2017 - 
 	* Fix encoder error: Too many packets buffered for output stream 0:1.
 	* Updated some installation instructions
-	* Quiet output of ffmpeg durring encoding, except in debug
+	* Quiet output of ffmpeg durring encoding, [except in debug (not working)]
 	* Improved filenaming, *'%(num)03d \- %(title)s'*, with some inteligents
 	* Added ID3 track numbers
 	* Added ID3 genre=Audiobook (by default)
