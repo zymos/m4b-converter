@@ -106,7 +106,7 @@ def parse_args():
                         help='path to ffmpeg binary')
     parser.add_argument('--encoder', metavar='BIN',
                         help='path to encoder binary (default: ffmpeg)')
-    parser.add_argument('--encode-opts', default='-loglevel panic -y -i %(infile)s -ar %(sample_rate)d -ab %(bit_rate)dk -c:v copy %(outfile)s',
+    parser.add_argument('--encode-opts', default='-loglevel %(loglevel)s -y -i %(infile)s -ar %(sample_rate)d -ab %(bit_rate)dk -c:v copy %(outfile)s',
                         metavar='"STR"', help='custom encoding string (see README)')
     parser.add_argument('--ext', default='mp3', help='extension of encoded files')
     parser.add_argument('--pipe-wav', action='store_true', help='pipe wav to encoder')
@@ -123,9 +123,11 @@ def parse_args():
     parser.add_argument('--not-audiobook', action='store_true', 
             help='do not add genre=Audiobook')
     parser.add_argument('-b', '--bitrate', type=int, 
-            help='Bitrate for mp3 encoding (example 64)')
+            help='bitrate for mp3 encoding, integer (example 64)')
     parser.add_argument('-s', '--samplerate', type=int,
-            help='Sample Rate for mp3 encoding (example 22050')
+            help='sample Rate for mp3 encoding (example 22050')
+    parser.add_argument('--extract-cover-art', action='store_true', 
+            help='extracts cover art as cover.jpg')
 
 
     args = parser.parse_args()
@@ -295,20 +297,20 @@ def show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata):
 
 
 
-def extract_cover_art(args, log, temp_dir, filename):
+def extract_cover_art(args, log, output_dir, filename):
     # Extract the cover art to reencode with it.
     """ THere seems to be a bug where cover art not copying art when start time != 0 """
 
-    extract_values = dict(ffmpeg=args.ffmpeg, orig_file=filename, temp_dir=temp_dir)
+    extract_values = dict(ffmpeg=args.ffmpeg, orig_file=filename, output_dir=output_dir)
     
     # encode_cmd = '%%(encoder)s %s' % args.encode_opts
-    cover_file= os.path.join(temp_dir, "cover.jpg")
+    cover_file= os.path.join(output_dir, "cover.jpg")
 
     if(os.path.exists(cover_file)):
         log.debug('cover.jpg file already exists')
     else:
-        extract_cmd = '%(ffmpeg)s -i %(orig_file)s -an -c:v copy %(temp_dir)s/cover.jpg'
-        log.info('Extract Cover Art...')
+        extract_cmd = '%(ffmpeg)s -i %(orig_file)s -an -c:v copy %(output_dir)s/cover.jpg'
+        log.info('Extracting cover art...')
         log.debug('Extract cover art command: %s' % (extract_cmd % extract_values))
         # run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav)
         run_command(log, extract_cmd, extract_values, 'extracting cover art', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -344,9 +346,14 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
         log.debug('Setting sample rate to %d Hz' % (args.samplerate))
         sample_rate=args.samplerate
 
+    if(args.debug): # improved ffmpeg debug output
+        ffmpeg_loglevel='debug'
+    else:
+        ffmpeg_loglevel='panic'
+
 
     cmd_values = dict(ffmpeg=args.ffmpeg, encoder=args.encoder, infile=filename,
-        sample_rate=sample_rate, bit_rate=bit_rate, outfile=encoded_file)
+        sample_rate=sample_rate, bit_rate=bit_rate, outfile=encoded_file, loglevel=ffmpeg_loglevel)
 
     if os.path.isfile(encoded_file):
         log.info("Found a previously encoded file '%s'. Do you want to re-encode it? (y/N/q)" % encoded_file)
@@ -360,12 +367,14 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
     if not '%(outfile)s' in args.encode_opts:
         log.error('%(outfile)s needs to be present in the encoding options. See the README.')
         sys.exit(1)
+    
 
     encode_cmd = '%%(encoder)s %s' % args.encode_opts
     if args.pipe_wav:
         encode_cmd = '%(ffmpeg)s -i %(infile)s -f wav pipe:1 | ' + encode_cmd
-    else: # extract the cover art, not sure if it can be piped
-        extract_cover_art(args, log, temp_dir, filename)
+    else: 
+        if(args.extract_cover_art): # extract the cover art, not sure if it can be piped
+            extract_cover_art(args, log, output_dir, filename)
     
     log.info(dedent('''
         Encoding %s:
@@ -374,7 +383,8 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
     log.info('Encoding audio (may take some time)...')
     log.debug('Encoding with command: %s' % (encode_cmd % cmd_values))
 
-    run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav)
+    encode_cmd = re.sub(' +', ' ', encode_cmd) # double spaces change output to ' '
+    run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     return encoded_file
 
@@ -450,12 +460,19 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
             # metadata_param='-metadata genre=Audiobook -metadata track=1/1' 
             # cover_param='-c:v copy'
 
+            if(args.debug):
+                ffmpeg_loglevel='debug'
+            else:
+                ffmpeg_loglevel='panic'
+
             # Get ready to reencode
             values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
                 start=str(chapter.start), metadata=metadata_param,
                 tmp_enc_file=encoded_file, chap_file=fname.encode('utf-8'), cover_file=cover_file, 
-                cover=cover_param, cover_title='Album cover', cover_comment='Cover (Front)')
-            split_cmd = '%(ffmpeg)s -y -i %(tmp_enc_file)s ' + cover_param + ' -c:a copy ' + metadata_param + ' -t %(duration)s -ss %(start)s %(chap_file)s'
+                cover=cover_param, cover_title='Album cover', cover_comment='Cover (Front)', loglevel=ffmpeg_loglevel)
+            split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s -c:a copy ' + metadata_param + ' -c:v copy -t %(duration)s -ss %(start)s %(chap_file)s'
+            # split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s ' + cover_param + ' -c:a copy ' + metadata_param + ' -t %(duration)s -ss %(start)s %(chap_file)s'
+            split_cmd = re.sub(' +', ' ', split_cmd) # double spaces change output to ' '
             #split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track="%(num)s/%(chapters_total)s" -id3v2_version 3 %(infile)s'
             # -metadata track="X/Y" -id3v2_version 3 -write_id3v1 1
             log.info("Splitting chapter %2d/%2d '%s.%s'..." % (chapter.num, len(chapters), chapter_name, args.ext))

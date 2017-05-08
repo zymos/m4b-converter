@@ -115,27 +115,28 @@ Encode with lame.exe:
 
     python m4b.py --encoder lame.exe --pipe-wav --encode-opts "-V 3 -h - %(outfile)s" myfile.m4b
 
+## Bugs
+
+* Does not add cover art to chapters other than 1
 
 ## Change Log
 
-4/2017 - 
-	
-	Fix encoder error: Too many packets buffered for output stream 0:1.
-	Updated some installation instructions
-	Quiet output of ffmpeg durrent encoding
-	Improved filenaming
-	Added ID3 track numbers
-	Added ID3 genre=Audiobook
-	Delete temp files/folder
-
-
-5/2017-
-
-	Fixed problem with encoding file with single chapter
-
+* 4/2017 - 
+	* Fix encoder error: Too many packets buffered for output stream 0:1.
+	* Updated some installation instructions
+	* Quiet output of ffmpeg durring encoding, except in debug
+	* Improved filenaming, *'%(num)03d \- %(title)s'*, with some inteligents
+	* Added ID3 track numbers
+	* Added ID3 genre=Audiobook (by default)
+	* Delete temp files/folder (by default)
+	* Automaticly changes bitrate 63kbps(M4B) to 64kbps(MP3), increase compatablity
+* 5/2017-
+	* Fixed problem with encoding file with single chapter
+	* Extracts cover art, as command line option
+	* bug fixes
 
 ## TODO
-	
-	Improve command line args, bitrate, samplerate
-	Check for chapers of zero time
-	Cover art is missing on tracks!=1
+* Check for chapers of zero time
+* Cover art is missing on tracks!=1
+* Check compatability for windows, etc
+* Change default output dir to be current working directory
