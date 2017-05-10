@@ -278,15 +278,15 @@ def show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata):
     # Show a summary of the parsed metadata.
 
     log.info(dedent('''
-        Detected M4B Metadata:
-          Chapters: %d
-          Bit rate: %d kbit/s
-          Sampling freq: %d Hz''' % (len(chapters), bit_rate, sample_rate)))
+        \tDetected M4B Metadata:
+          \t  Chapters: %d
+          \t  Bit rate: %d kbit/s
+          \t  Sampling freq: %d Hz''' % (len(chapters), bit_rate, sample_rate)))
 
     if args.debug and chapters:
         log.debug(dedent('''
-            Chapter data:
-              %s''' % '\n'.join(['  %s' % c for c in chapters])))
+            \tChapter data:
+              \t  %s''' % '\n'.join(['  %s' % c for c in chapters])))
 
     if args.no_mp4v2 and not chapters:
         log.warning("No chapters were found. There may be chapters present but ffmpeg can't read them. Try to enable mp4v2.")
@@ -298,23 +298,22 @@ def show_metadata_info(args, log, chapters, sample_rate, bit_rate, metadata):
 
 
 def extract_cover_art(args, log, output_dir, filename):
-    # Extract the cover art to reencode with it.
-    """ THere seems to be a bug where cover art not copying art when start time != 0 """
-
-    extract_values = dict(ffmpeg=args.ffmpeg, orig_file=filename, output_dir=output_dir)
+    # Extract the cover art to 'cover.jpg'.
     
-    # encode_cmd = '%%(encoder)s %s' % args.encode_opts
     cover_file= os.path.join(output_dir, "cover.jpg")
+
+    extract_values = dict(ffmpeg=args.ffmpeg, orig_file=filename, cover_file=cover_file)
 
     if(os.path.exists(cover_file)):
         log.debug('cover.jpg file already exists')
     else:
-        extract_cmd = '%(ffmpeg)s -i %(orig_file)s -an -c:v copy %(output_dir)s/cover.jpg'
+        extract_cmd = '%(ffmpeg)s -i %(orig_file)s -an %(cover_file)s'
         log.info('Extracting cover art...')
         log.debug('Extract cover art command: %s' % (extract_cmd % extract_values))
-        # run_command(log, encode_cmd, cmd_values, 'encoding audio', shell=args.pipe_wav)
         run_command(log, extract_cmd, extract_values, 'extracting cover art', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-   
+        if(not(os.path.exists(cover_file))):
+            log.info('Warning: cover art could not be extracted, this is a bug, sorry.')
+
 
 
 
@@ -335,7 +334,6 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
         fname = '%s.%s' % (basename, args.ext)
         encoded_file = os.path.join(temp_dir, fname)
 
-    # bit_rate = str(bit_rate) + 'k' # adding a k
     if(not(args.bitrate is None)): #bitrate from args
         log.debug('Setting bitrate to %d kbps' % (args.bitrate))
         bit_rate=args.bitrate
@@ -372,14 +370,11 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
     encode_cmd = '%%(encoder)s %s' % args.encode_opts
     if args.pipe_wav:
         encode_cmd = '%(ffmpeg)s -i %(infile)s -f wav pipe:1 | ' + encode_cmd
-    else: 
-        if(args.extract_cover_art): # extract the cover art, not sure if it can be piped
-            extract_cover_art(args, log, output_dir, filename)
     
     log.info(dedent('''
-        Encoding %s:
-          Bit rate: %d kbit/s
-          Sampling freq: %d Hz''' % (args.ext, bit_rate, sample_rate)))
+        \tEncoding %s:
+          \t  Bit rate: %d kbit/s
+          \t  Sampling freq: %d Hz''' % (args.ext, bit_rate, sample_rate)))
     log.info('Encoding audio (may take some time)...')
     log.debug('Encoding with command: %s' % (encode_cmd % cmd_values))
 
@@ -437,16 +432,16 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
                 fname = os.path.join(output_dir, '%s.%s' % (chapter_name, args.ext))
             
             # cover art
-            cover_file=os.path.join(temp_dir, "cover.jpg")
-            if(chapter.num == 1):
-                cover_param='-c:v copy'
-            elif(os.path.exists(cover_file)):
-                log.debug("Adding cover metadata")
-                cover_param = '-i %(cover_file)s -map 0 -map 1 -c:v copy -metadata:s:v title=%(cover_title)s -metadata:s:v comment=%(cover_comment)s'
+            # cover_file=os.path.join(temp_dir, "cover.jpg")
+            # if(chapter.num == 1):
+                # cover_param='-c:v copy'
+            # elif(os.path.exists(cover_file)):
+                # log.debug("Adding cover metadata")
+                # cover_param = '-i %(cover_file)s -map 0 -map 1 -c:v copy -metadata:s:v title=%(cover_title)s -metadata:s:v comment=%(cover_comment)s'
                 # ffmpeg -i original.mp3 -i cover.png -map 0:0 -map 1:0 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (Front)" -id3v2_version 3 -write_id3v1 1 result.mp3
-            else: # no cover exist
-                cover_param=''
-                log.debug("No cover.jpg, not adding the metadata")
+            # else: # no cover exist
+                # cover_param=''
+                # log.debug("No cover.jpg, not adding the metadata")
             if(not(args.not_audiobook)): # add genre=Audiobook, should work with mp3 and m4b
                 log.debug("Adding genre=Audiobook")
                 metadata_genre='-metadata genre=Audiobook' # -metadata:s:a genre=Audiobook maybe
@@ -468,8 +463,8 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
             # Get ready to reencode
             values = dict(ffmpeg=args.ffmpeg, duration=str(chapter.duration()),
                 start=str(chapter.start), metadata=metadata_param,
-                tmp_enc_file=encoded_file, chap_file=fname.encode('utf-8'), cover_file=cover_file, 
-                cover=cover_param, cover_title='Album cover', cover_comment='Cover (Front)', loglevel=ffmpeg_loglevel)
+                tmp_enc_file=encoded_file, chap_file=fname.encode('utf-8'),
+                loglevel=ffmpeg_loglevel)
             split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s -c:a copy ' + metadata_param + ' -c:v copy -t %(duration)s -ss %(start)s %(chap_file)s'
             # split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s ' + cover_param + ' -c:a copy ' + metadata_param + ' -t %(duration)s -ss %(start)s %(chap_file)s'
             split_cmd = re.sub(' +', ' ', split_cmd) # double spaces change output to ' '
@@ -525,6 +520,10 @@ def main():
         encoded_file = encode(args, log, output_dir, temp_dir, filename,
             basename, sample_rate, bit_rate, metadata)
 
+        # extract the cover art
+        if(args.extract_cover_art and not(args.pipe_wav)): # not sure if it can be piped
+            extract_cover_art(args, log, output_dir, filename)
+        
         # split into chapter files
         split(args, log, output_dir, encoded_file, chapters, temp_dir)
 

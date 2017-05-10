@@ -81,17 +81,18 @@ There are two ways to use this script:
 
 You can customize the chapter filenames with `--custom-name "STR"` where `STR` is a valid python [format string](http://docs.python.org/library/stdtypes.html#string-formatting-operations).
 
-Default ("My Title.mp3"):
+Default: three digit chapter number, with leading zeros, and chapter title ("003 - My Title.mp3"):
+
+    --custom-name "%(num)03d - %(title)s"
+
+Chapter title ("My Title.mp3"):
 
     --custom-name "%(title)s"
 
-Chapter number ("3 - My Title.mp3"):
+Chapter number, without leading zeros, and chapter title  ("3 - My Title.mp3"):
 
     --custom-name "%(num)d - %(title)s"
 
-Chapter number with leading zero ("03 - My Title.mp3"):
-
-    --custom-name "%(num)02d - %(title)s"
 
 #### Encoding
 
@@ -120,7 +121,7 @@ If you rather want .mp4 files you can skip encoding to speed up the conversion p
 
 Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 
-    python m4b.py --encode-opts "-y -i %(infile)s -acodec libmp3lame -ar 22050 -ab 128k %(outfile)s" myfile.m4b
+    python m4b.py --bitrate 128 --samplerate 22050 myfile.m4b
 
 Encode with lame.exe:
 
@@ -135,7 +136,7 @@ Encode with lame.exe:
 * 4/2017 - 
 	* Fix encoder error: Too many packets buffered for output stream 0:1.
 	* Updated some installation instructions
-	* Quiet output of ffmpeg durring encoding, [except in debug (not working)]
+	* Quiet output of ffmpeg durring encoding, ~~(except in debug)~~
 	* Improved filenaming, *'%(num)03d \- %(title)s'*, with some inteligents
 	* Added ID3 track numbers
 	* Added ID3 genre=Audiobook (by default)
@@ -143,7 +144,7 @@ Encode with lame.exe:
 	* Automaticly changes bitrate 63kbps(M4B) to 64kbps(MP3), increase compatablity
 * 5/2017-
 	* Fixed problem with encoding file with single chapter
-	* Extracts cover art, as command line option
+	* Extracts cover art, as command line option (works most of the time)
 	* bug fixes
 
 ## TODO
@@ -151,3 +152,4 @@ Encode with lame.exe:
 * Cover art is missing on tracks!=1
 * Check compatability for windows, etc
 * Change default output dir to be current working directory
+* Fix extract_cover_art, does not work all the time
