@@ -1,6 +1,7 @@
-# m4b.py
+# m4b-split
 
-This is a simple python script to convert and split m4b audio books into mp3 files.
+This is a simple python script to convert m4b to mp3 and split them into seperate file for each
+chapter.
 
 
 ## Requirements
@@ -20,7 +21,7 @@ This is a simple python script to convert and split m4b audio books into mp3 fil
 own dll, then place it in this directory.
 4. Download this script: 
 	* Download: [m4b-converter](https://github.com/zymos/m4b-converter/archive/master.zip)
-	* or GIT: `git clone https://github.com/zymos/m4b-converter.git`
+	* or Git: `git clone https://github.com/zymos/m4b-converter.git`
 
 ### Ubuntu 10.10
 
@@ -28,21 +29,21 @@ own dll, then place it in this directory.
 2. Download mp4v2 then [compile](http://code.google.com/p/mp4v2/wiki/BuildSource) and install.
 4. Download this script: 
 	* Download: [m4b-converter](https://github.com/zymos/m4b-converter/archive/master.zip)
-	* or GIT: `git clone https://github.com/zymos/m4b-converter.git`
+	* or Git: `git clone https://github.com/zymos/m4b-converter.git`
 
 ### Ubuntu 12, 14, 16
 
 1. Install packages: `sudo apt-get install python ffmpeg libavcodec-extra libmp4v2-2`
 4. Download this script: 
 	* Download: [m4b-converter](https://github.com/zymos/m4b-converter/archive/master.zip)
-	* or GIT: `git clone https://github.com/zymos/m4b-converter.git`
+	* or Git: `git clone https://github.com/zymos/m4b-converter.git`
 
 ### Debian 9.0 Stretch - 2017
 
 1. Install packages: `sudo apt-get install python ffmpeg libavcodec-extra libmp4v2-2`
 4. Download this script: 
 	* Download: [m4b-converter](https://github.com/zymos/m4b-converter/archive/master.zip)
-	* or GIT: `git clone https://github.com/zymos/m4b-converter.git`
+	* or Git: `git clone https://github.com/zymos/m4b-converter.git`
 
 ## Usage
 
@@ -135,33 +136,40 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 
     python m4b.py --bitrate 128 --samplerate 22050 myfile.m4b
 
-Encode with lame.exe:
+~~Encode with lame.exe:~~
 
-    python m4b.py --encoder lame.exe --pipe-wav --encode-opts "-V 3 -h - %(outfile)s" myfile.m4b
+	~~python m4b.py --encoder lame.exe --pipe-wav --encode-opts "-V 3 -h - %(outfile)s" myfile.m4b~~
 
 ## Bugs
 
 * Does not add cover art to chapters other than 1
+* Cover art does not always extract, I've had some problems with m4b w/ png cover art
 
 ## Change Log
 
-* 4/2017 - 
+* 4/2017
 	* Fix encoder error: Too many packets buffered for output stream 0:1.
 	* Updated some installation instructions
 	* Quiet output of ffmpeg durring encoding, ~~(except in debug)~~
-	* Improved filenaming, *'%(num)03d \- %(title)s'*, with some inteligents
+	* Improved filenaming, *'%(num)03d \- %(title)s'*, with some inteligence
 	* Added ID3 track numbers
 	* Added ID3 genre=Audiobook (by default)
 	* Delete temp files/folder (by default)
 	* Automaticly changes bitrate 63kbps(M4B) to 64kbps(MP3), increase compatablity
-* 5/2017-
+* 5/2017
 	* Fixed problem with encoding file with single chapter
 	* Extracts cover art, as command line option (works most of the time)
+	* Added bitrate and sample rate command line options
 	* bug fixes
+* 6/2017
+	* Remove/ignore chapters of zero durration (libm4bv4.py)
+	* Non standard bitrates changes to 32, 48, 96, 128, 160kbps
+
 
 ## TODO
-* Check for chapers of zero time
 * Cover art is missing on tracks!=1
 * Check compatability for windows, etc
-* Change default output dir to be current working directory
+* Change default output dir to be current working directory (maybe)
 * Fix extract_cover_art, does not work all the time
+* Display ffmpeg output in debug mode
+* retest all command line options

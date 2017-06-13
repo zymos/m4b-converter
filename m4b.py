@@ -137,9 +137,12 @@ def parse_args():
     # Required when dropping m4b files onto m4b.py
     if not cwd == '':
         os.chdir(cwd)
+        if args.output_dir is None:
+            args.output_dir = cwd
+    else:
+        if args.output_dir is None:
+            args.output_dir = os.getcwd()
 
-    if args.output_dir is None:
-        args.output_dir = cwd
 
     if args.encoder is None:
         args.encoder = args.ffmpeg
@@ -337,9 +340,24 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
     if(not(args.bitrate is None)): #bitrate from args
         log.debug('Setting bitrate to %d kbps' % (args.bitrate))
         bit_rate=args.bitrate
-    elif(bit_rate == 63): # bitrate of 63k is common for m4b, but not mp3
-        log.debug('Changing bitrate from 63k to 64k, to increase compatability')
-        bit_rate=64
+    elif(bit_rate <= 32 ): # 
+        log.debug('Changing bitrate from %dk to 32k, to increase compatability' % bit_rate)
+        bit_rate=32   
+   elif(bit_rate >= 33 and bit_rate <= 48 ):  
+        log.debug('Changing bitrate from %dk to 48k, to increase compatability' % bit_rate)
+        bit_rate=48
+   elif(bit_rate >= 49 and bit_rate <= 64 ): # bitrate of 63k is common for m4b, but not mp3
+        log.debug('Changing bitrate from %dk to 64k, to increase compatability' % bit_rate)
+        bit_rate=64        
+    elif(bit_rate >= 65 and bit_rate <= 96 ):
+        log.debug('Changing bitrate from %dk to 96k, to increase compatability' % bit_rate)
+        bit_rate=96
+    elif(bit_rate >= 97 and bit_rate <= 159 ): 
+        log.debug('Changing bitrate from %dk to 128k, to increase compatability' % bitrate)
+        bit_rate=128
+    elif(bit_rate >= 160 ): 
+        log.debug('Changing bitrate from %dk to 160k, to increase compatability' % bitrate)
+        bit_rate=160        
     if(not(args.samplerate is None)): # sample rate from args
         log.debug('Setting sample rate to %d Hz' % (args.samplerate))
         sample_rate=args.samplerate
@@ -490,15 +508,23 @@ def main():
     if sys.version_info[0] >= 3:
         raise Exception("This script sadly does not work with python3")
 
+    # Current working directory
+    cwd = os.getcwd()
+
     # parse arguments
     args = parse_args()
 
     # for each m4b file
     for filename in args.filename:
+        
+        # fixes relative path
+        if(not(os.path.isabs(filename))):
+            filename = os.path.join(cwd, filename)
+        
         # create output directory
+        # full_filename = os.path.join(cwd, filename)
         basename = os.path.splitext(os.path.basename(filename))[0]
         output_dir = os.path.join(args.output_dir, basename)
-
         # skip encoding xor create tmp dir
         if args.skip_encoding:
             temp_dir = output_dir
@@ -510,7 +536,12 @@ def main():
 
         output_dir = output_dir.decode('utf-8')
 
-        log.info("M4B Split: '%s'." % filename)
+        # Print some basic info
+        log.info("M4B Split: '%s'." % os.path.basename(filename))
+        log.debug("Full filename: '%s'" % filename)
+        log.debug("New directory for chapters: '%s' " % basename)
+        log.debug("Output dir: '%s' " % output_dir)
+
 
         # grab metadata
         chapters, sample_rate, bit_rate, metadata = load_metadata(args, log, filename)
