@@ -75,12 +75,13 @@ class MP4File:
         start = 0
         chapters = []
         for n in range(0, chapter_count.value):
-            c = Chapter(title=chapter_list[n].title,
-                        start=start,
-                        end=start+int(chapter_list[n].duration),
-                        num=n+1)
-            chapters.append(c)
-            start += chapter_list[n].duration
+            if(chapter_list[n].duration != 0):
+                c = Chapter(title=chapter_list[n].title,
+                            start=start,
+                            end=start+int(chapter_list[n].duration),
+                            num=n+1)
+                chapters.append(c)
+                start += chapter_list[n].duration
         self.chapters = chapters
 
     def close(self):
