@@ -343,10 +343,10 @@ def encode(args, log, output_dir, temp_dir, filename, basename, sample_rate, bit
     elif(bit_rate <= 32 ): # 
         log.debug('Changing bitrate from %dk to 32k, to increase compatability' % bit_rate)
         bit_rate=32   
-   elif(bit_rate >= 33 and bit_rate <= 48 ):  
+    elif(bit_rate >= 33 and bit_rate <= 48 ):  
         log.debug('Changing bitrate from %dk to 48k, to increase compatability' % bit_rate)
         bit_rate=48
-   elif(bit_rate >= 49 and bit_rate <= 64 ): # bitrate of 63k is common for m4b, but not mp3
+    elif(bit_rate >= 49 and bit_rate <= 64 ): # bitrate of 63k is common for m4b, but not mp3
         log.debug('Changing bitrate from %dk to 64k, to increase compatability' % bit_rate)
         bit_rate=64        
     elif(bit_rate >= 65 and bit_rate <= 96 ):
