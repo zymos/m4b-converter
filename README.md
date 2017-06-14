@@ -144,6 +144,7 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 
 * Does not add cover art to chapters other than 1
 * Cover art does not always extract, I've had some problems with m4b w/ png cover art
+* !!! Last chap gets cut off !!!!!!!!
 
 ## Change Log
 
