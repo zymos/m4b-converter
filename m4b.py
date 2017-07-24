@@ -483,7 +483,12 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
                 start=str(chapter.start), metadata=metadata_param,
                 tmp_enc_file=encoded_file, chap_file=fname.encode('utf-8'),
                 loglevel=ffmpeg_loglevel)
-            split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s -c:a copy ' + metadata_param + ' -c:v copy -t %(duration)s -ss %(start)s %(chap_file)s'
+            if(chapter.num == len(chapters)):
+                split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s -c:a copy ' + metadata_param + ' -c:v copy -ss %(start)s %(chap_file)s'
+                log.debug("Last chapter encode")
+            else:
+                split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s -c:a copy ' + metadata_param + ' -c:v copy -t %(duration)s -ss %(start)s %(chap_file)s'
+
             # split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s ' + cover_param + ' -c:a copy ' + metadata_param + ' -t %(duration)s -ss %(start)s %(chap_file)s'
             split_cmd = re.sub(' +', ' ', split_cmd) # double spaces change output to ' '
             #split_cmd = '%(ffmpeg)s -y -i %(outfile)s -c:a copy -c:v copy -t %(duration)s -ss %(start)s -metadata track="%(num)s/%(chapters_total)s" -id3v2_version 3 %(infile)s'

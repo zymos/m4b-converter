@@ -173,4 +173,21 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 * Change default output dir to be current working directory (maybe)
 * Fix extract_cover_art, does not work all the time
 * Display ffmpeg output in debug mode
-* retest all command line options
+* Retest all command line options
+	* OK: --help
+	* Ok: --bitrate
+	* Ok: --samplerate
+	* Ok (most of the time): --extract-cover-art
+	* Ok: --debug
+	* : --output-dir
+	* : --custom-name
+	* Ok: --ffmpeg
+	* : --encoder
+	* : --encode-opts
+	* Failed: --ext (id3 problem)
+	* : --pipe-wav
+	* Failed: --skip-encoding
+	* OK: --keep-tmp-files
+	* Failed: --not-audiobook
+	* Failed: --no-mp4v2 doesn't work
+
