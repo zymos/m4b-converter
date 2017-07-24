@@ -179,15 +179,15 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 	* Ok: --samplerate
 	* Ok (most of the time): --extract-cover-art
 	* Ok: --debug
-	* : --output-dir
-	* : --custom-name
+	* Ok: --output-dir
+	* Failed: --custom-name
 	* Ok: --ffmpeg
 	* : --encoder
 	* : --encode-opts
-	* Failed: --ext (id3 problem)
+	* Ok: --ext
 	* : --pipe-wav
 	* Failed: --skip-encoding
 	* OK: --keep-tmp-files
-	* Failed: --not-audiobook
+	* Ok: --not-audiobook
 	* Failed: --no-mp4v2 doesn't work
 

@@ -108,7 +108,7 @@ def parse_args():
                         help='path to encoder binary (default: ffmpeg)')
     parser.add_argument('--encode-opts', default='-loglevel %(loglevel)s -y -i %(infile)s -ar %(sample_rate)d -ab %(bit_rate)dk -c:v copy %(outfile)s',
                         metavar='"STR"', help='custom encoding string (see README)')
-    parser.add_argument('--ext', default='mp3', help='extension of encoded files')
+    parser.add_argument('--ext', default='mp3', help='extension of encoded files (aac,flac,etc)')
     parser.add_argument('--pipe-wav', action='store_true', help='pipe wav to encoder')
     parser.add_argument('--skip-encoding', action='store_true',
                         help='do not encode audio (keep as .mp4)')
@@ -125,7 +125,7 @@ def parse_args():
     parser.add_argument('-b', '--bitrate', type=int, 
             help='bitrate for mp3 encoding, integer (example 64)')
     parser.add_argument('-s', '--samplerate', type=int,
-            help='sample Rate for mp3 encoding (example 22050')
+            help='sample rate for mp3 encoding (example 22050')
     parser.add_argument('--extract-cover-art', action='store_true', 
             help='extracts cover art as cover.jpg')
 
@@ -460,15 +460,18 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
             # else: # no cover exist
                 # cover_param=''
                 # log.debug("No cover.jpg, not adding the metadata")
+            metadata_param=''
             if(not(args.not_audiobook)): # add genre=Audiobook, should work with mp3 and m4b
                 log.debug("Adding genre=Audiobook")
                 metadata_genre='-metadata genre=Audiobook' # -metadata:s:a genre=Audiobook maybe
+                metadata_param=metadata_genre
             if(args.ext == 'mp3'): # add ID3 tag
                 log.debug("Adding mp3 id3")
                 metadata_id3='-id3v2_version 3 -write_id3v1 1'
+                metadata_param=" ".join([metadata_param, metadata_id3])
             log.debug("Adding track metadata")
             metadata_track='-metadata track=' + str(chapter.num) + '/' + str(len(chapters))
-            metadata_param=" ".join([metadata_genre, metadata_track, metadata_id3])
+            metadata_param=" ".join([metadata_param, metadata_track])
             log.debug("Metadata params: %s", metadata_param)
             # metadata_param='-metadata genre=Audiobook -metadata track=1/1' 
             # cover_param='-c:v copy'
