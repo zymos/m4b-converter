@@ -72,12 +72,19 @@ class Chapter:
 
 def run_command(log, cmdstr, values, action, ignore_errors=False, **kwargs):
     # Executes external command (FFMPEG) 
+    # cmdstr = cmdstr + "xxx" # add and error to capture
+
+    log.debug("Run_command: Command: %s" % cmdstr)
+    log.debug("Run_command: Command with values: %s" % cmdstr%values)
+    log.debug("Run_command: Action description: %s" % action)
 
     cmd = []
+
     # cmdstr=re.sub(' +', ' ', cmdstr)
     for opt in cmdstr.split(' '):
         cmd.append(opt % values)
-    proc = subprocess.Popen(cmd, **kwargs)
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE )
+
     (stdout, output) = proc.communicate()
     if not ignore_errors and not proc.returncode == 0:
         msg = dedent('''
@@ -100,10 +107,10 @@ def parse_args():
 
     parser.add_argument('-o', '--output-dir', help='directory to store encoded files',
                         metavar='DIR')
-    parser.add_argument('--custom-name', default='%(num)03d \- %(title)s', metavar='"STR"',
+    parser.add_argument('--custom-name', metavar='"STR"',
                         help='customize chapter filenames (see README)')
     parser.add_argument('--ffmpeg', default='ffmpeg', metavar='BIN',
-                        help='path to ffmpeg binary')
+                        help='path to ffmpeg binary (redundunt use encoder)')
     parser.add_argument('--encoder', metavar='BIN',
                         help='path to encoder binary (default: ffmpeg)')
     parser.add_argument('--encode-opts', default='-loglevel %(loglevel)s -y -i %(infile)s -ar %(sample_rate)d -ab %(bit_rate)dk -c:v copy %(outfile)s',
@@ -131,7 +138,12 @@ def parse_args():
 
 
     args = parser.parse_args()
-
+    
+    # if(args.custom_name):
+        
+    # else:
+        # args.custom_name = '%(num)03d \- %(title)s'
+        # args.custom_name_ = 1
     cwd = os.path.dirname(__file__)
 
     # Required when dropping m4b files onto m4b.py
@@ -434,13 +446,22 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
             
             # Create output filename
             # remove special chars, control chars and all around anoying chars
-            chapter_name = re_sub.sub('', (args.custom_name % values).replace('/', '-').replace(':', '-'))
+            if(not(args.custom_name)):
+                 custom_name = '%(num)03d - %(title)s'
+            else:
+                 custom_name = args.custom_name
+            chapter_name = re_sub.sub('', (custom_name % values).replace('/', '-').replace(':', '-'))
             if not isinstance(chapter_name, unicode):
                 chapter_name = unicode(chapter_name, 'utf-8')
             chapter_name = re.sub('[^a-zA-Z0-9!\(\)\.,_\-µÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ ]', '', chapter_name) # remove annoying chars
             # if chap name is blank or title=chap_num, correct
-            if(chapter_name == '' or chapter.title == "%03d"%chapter.num): 
+            if(chapter_name == ''): 
+                log.debug("Invalid chapter name: %s, using '%(num)03d", chapter_name)              
                 chapter_name = "%03d" % chapter.num
+            # if(chapter.title == "%03d"%chapter.num): 
+                # log.debug("Chapter number is the same as title, removing redundancy")              
+                # chapter_name = "%03d" % chapter.num
+
             chapter_name = re.sub(' +', ' ', chapter_name) # remove multiple space
 
             # temporarly rename file in windows
@@ -462,17 +483,17 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
                 # log.debug("No cover.jpg, not adding the metadata")
             metadata_param=''
             if(not(args.not_audiobook)): # add genre=Audiobook, should work with mp3 and m4b
-                log.debug("Adding genre=Audiobook")
+                # log.debug("Adding genre=Audiobook")
                 metadata_genre='-metadata genre=Audiobook' # -metadata:s:a genre=Audiobook maybe
                 metadata_param=metadata_genre
             if(args.ext == 'mp3'): # add ID3 tag
-                log.debug("Adding mp3 id3")
+                # log.debug("Adding mp3 id3")
                 metadata_id3='-id3v2_version 3 -write_id3v1 1'
                 metadata_param=" ".join([metadata_param, metadata_id3])
-            log.debug("Adding track metadata")
+            # log.debug("Adding track metadata")
             metadata_track='-metadata track=' + str(chapter.num) + '/' + str(len(chapters))
             metadata_param=" ".join([metadata_param, metadata_track])
-            log.debug("Metadata params: %s", metadata_param)
+            log.debug("metadata params: %s", metadata_param)
             # metadata_param='-metadata genre=Audiobook -metadata track=1/1' 
             # cover_param='-c:v copy'
 
@@ -528,7 +549,7 @@ def main():
         # fixes relative path
         if(not(os.path.isabs(filename))):
             filename = os.path.join(cwd, filename)
-        
+
         # create output directory
         # full_filename = os.path.join(cwd, filename)
         basename = os.path.splitext(os.path.basename(filename))[0]
@@ -541,6 +562,11 @@ def main():
 
         # setup logging
         log = setup_logging(args, basename)
+
+        # File does not exist
+        if(not(os.path.isfile(filename))):
+            log.info("File does not exist: '%s'." % filename)
+            exit(1)
 
         output_dir = output_dir.decode('utf-8')
 
@@ -567,7 +593,7 @@ def main():
         split(args, log, output_dir, encoded_file, chapters, temp_dir)
 
         # deletes temporary files
-        if(not(args.keep_tmp_files)):
+        if(not(args.keep_tmp_files) and not(args.skip_encoding)):
             log.debug("Cleaning up temporary files")
             shutil.rmtree(temp_dir)
 

@@ -94,6 +94,14 @@ There are two ways to use this script:
 
 You can customize the chapter filenames with `--custom-name "STR"` where `STR` is a valid python [format string](http://docs.python.org/library/stdtypes.html#string-formatting-operations).
 
+##### Variable options
+* title - "chapter title"
+* num - "chapter number"
+* chapters_total - "number of chapters:
+* start - "chapters start time"
+* end - "chapters stop time"
+* durration - "chapters time durration"
+
 Default: three digit chapter number, with leading zeros, and chapter title ("003 - My Title.mp3"):
 
     --custom-name "%(num)03d - %(title)s"
@@ -163,8 +171,16 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 	* Added bitrate and sample rate command line options
 	* bug fixes
 * 6/2017
-	* Remove/ignore chapters of zero durration (libm4bv4.py)
+	* --Remove/ignore chapters of zero durration (libm4bv4.py)--
 	* Non standard bitrates changes to 32, 48, 96, 128, 160kbps
+* 7/2017
+	* Fixed broken command line opts
+	* Fixed no id3 on non-mp3
+	* Fixed opts --ext, -skip-encoding, 
+	* Added exit on file not found
+	* Display ffmpeg output in debug mode
+	* Fix exit on ffmpeg fail
+	* added file not found error 
 
 
 ## TODO
@@ -172,7 +188,6 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 * Check compatability for windows, etc
 * Change default output dir to be current working directory (maybe)
 * Fix extract_cover_art, does not work all the time
-* Display ffmpeg output in debug mode
 * Retest all command line options
 	* OK: --help
 	* Ok: --bitrate
@@ -186,8 +201,11 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 	* : --encode-opts
 	* Ok: --ext
 	* : --pipe-wav
-	* Failed: --skip-encoding
+	* Ok: --skip-encoding
 	* OK: --keep-tmp-files
 	* Ok: --not-audiobook
 	* Failed: --no-mp4v2 doesn't work
-
+* Add custom name validity check
+* Fix: no-libm4b option
+* Add useful error output on libmp4v2.py
+* Fix: print ffmpeg output on fail while not in debug
