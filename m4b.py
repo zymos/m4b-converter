@@ -458,9 +458,12 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
             if(chapter_name == ''): 
                 log.debug("Invalid chapter name: %s, using '%(num)03d", chapter_name)              
                 chapter_name = "%03d" % chapter.num
-            # if(chapter.title == "%03d"%chapter.num): 
-                # log.debug("Chapter number is the same as title, removing redundancy")              
-                # chapter_name = "%03d" % chapter.num
+            if(chapter.title == "%03d" % chapter.num): 
+                log.debug("Chapter number is the same as title, removing redundancy")              
+                chapter_name = "%03d" % chapter.num
+                # print(chapter_name)
+                # sys.exit(0)
+
 
             chapter_name = re.sub(' +', ' ', chapter_name) # remove multiple space
 
@@ -507,7 +510,7 @@ def split(args, log, output_dir, encoded_file, chapters, temp_dir):
                 start=str(chapter.start), metadata=metadata_param,
                 tmp_enc_file=encoded_file, chap_file=fname.encode('utf-8'),
                 loglevel=ffmpeg_loglevel)
-            if(chapter.num == len(chapters)):
+            if(chapter.num == len(chapters)): # last chapter
                 split_cmd = '%(ffmpeg)s -loglevel %(loglevel)s -y -i %(tmp_enc_file)s -c:a copy ' + metadata_param + ' -c:v copy -ss %(start)s %(chap_file)s'
                 log.debug("Last chapter encode")
             else:

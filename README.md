@@ -152,7 +152,8 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 
 * Does not add cover art to chapters other than 1
 * Cover art does not always extract, I've had some problems with m4b w/ png cover art
-* !!! Last chap gets cut off !!!!!!!!
+* !!! Last chap gets cut off !!!!!!!!, i think i fixed it
+* output dir doesnt work with reletive dir
 
 ## Change Log
 
@@ -187,6 +188,8 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 * Cover art is missing on tracks!=1
 * Check compatability for windows, etc
 * Change default output dir to be current working directory (maybe)
+	* C:\Users\%USERPROFILE%\My Music\
+	* $HOME/Documents/
 * Fix extract_cover_art, does not work all the time
 * Retest all command line options
 	* OK: --help
@@ -194,7 +197,7 @@ Force sampling freq to 22050 Hz and bit rate to 128 kbit/s:
 	* Ok: --samplerate
 	* Ok (most of the time): --extract-cover-art
 	* Ok: --debug
-	* Ok: --output-dir
+	* ?: --output-dir 
 	* Failed: --custom-name
 	* Ok: --ffmpeg
 	* : --encoder
